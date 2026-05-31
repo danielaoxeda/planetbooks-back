@@ -14,6 +14,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.ArrayList;
+import java.util.Objects;
+import java.util.Optional;
 
 /**
  * Servicio de gestión de productos.
@@ -31,6 +34,7 @@ import java.util.stream.Collectors;
 public class ProductService {
 
     private final ProductRepository productRepository;
+    
 
     /**
      * Obtiene todos los productos con paginación.
@@ -113,12 +117,11 @@ public class ProductService {
      */
     public List<String> getAllTags() {
         log.debug("Obteniendo todos los tags");
-
         return productRepository.findAll()
             .stream()
             .map(Product::getTag)
-            .distinct()
             .filter(tag -> tag != null && !tag.isEmpty())
+            .distinct()
             .collect(Collectors.toList());
     }
 
@@ -131,12 +134,11 @@ public class ProductService {
      */
     public List<String> getAllLevels() {
         log.debug("Obteniendo todos los niveles");
-
         return productRepository.findAll()
             .stream()
             .map(Product::getLevel)
-            .distinct()
             .filter(level -> level != null && !level.isEmpty())
+            .distinct()
             .collect(Collectors.toList());
     }
 
@@ -160,11 +162,10 @@ public class ProductService {
             .format(product.getFormat())
             .publisher(product.getPublisher())
             .language(product.getLanguage())
-            .items(product.getItems() != null ?
-                product.getItems().stream()
+            .items(Optional.ofNullable(product.getItems()).orElse(List.of()).stream()
+                    .filter(Objects::nonNull)
                     .map(this::convertItemToDTO)
-                    .collect(Collectors.toList()) :
-                List.of())
+                    .collect(Collectors.toList()))
             .build();
     }
 
@@ -186,6 +187,93 @@ public class ProductService {
             .format(item.getFormat())
             .isDefault(item.getIsDefault())
             .build();
+    }
+
+    /**
+     * Crea un nuevo producto (con sus items si vienen en el DTO).
+     */
+    @Transactional
+    public ProductDTO createProduct(ProductDTO dto) {
+        Product product = Product.builder()
+            .title(dto.getTitle())
+            .description(dto.getDescription())
+            .tag(dto.getTag())
+            .categories(dto.getCategories() != null ? dto.getCategories() : List.of())
+            .level(dto.getLevel())
+            .image(dto.getImage())
+            .gallery(dto.getGallery() != null ? dto.getGallery() : List.of())
+            .pages(dto.getPages())
+            .format(dto.getFormat())
+            .publisher(dto.getPublisher())
+            .language(dto.getLanguage())
+            .items(new ArrayList<>())
+            .build();
+        // map and attach items if present
+        product.getItems().addAll(mapDtoItemsToEntities(dto.getItems(), product));
+
+        Product saved = productRepository.save(product);
+        return convertToDTO(saved);
+    }
+
+    /**
+     * Actualiza un producto existente.
+     */
+    @Transactional
+    public ProductDTO updateProduct(Long id, ProductDTO dto) {
+        Product product = productRepository.findById(id)
+            .orElseThrow(() -> new IllegalArgumentException("Producto no encontrado"));
+
+        product.setTitle(dto.getTitle());
+        product.setDescription(dto.getDescription());
+        product.setTag(dto.getTag());
+        product.setCategories(dto.getCategories() != null ? dto.getCategories() : List.of());
+        product.setLevel(dto.getLevel());
+        product.setImage(dto.getImage());
+        product.setGallery(dto.getGallery() != null ? dto.getGallery() : List.of());
+        product.setPages(dto.getPages());
+        product.setFormat(dto.getFormat());
+        product.setPublisher(dto.getPublisher());
+        product.setLanguage(dto.getLanguage());
+
+        // Replace items atomically: clear and add mapped items
+        product.getItems().clear();
+        product.getItems().addAll(mapDtoItemsToEntities(dto.getItems(), product));
+
+        Product saved = productRepository.save(product);
+        return convertToDTO(saved);
+    }
+
+    /**
+     * Elimina un producto por ID.
+     */
+    @Transactional
+    public void deleteProduct(Long id) {
+        if (!productRepository.existsById(id)) {
+            throw new IllegalArgumentException("Producto no encontrado");
+        }
+        productRepository.deleteById(id);
+    }
+
+    /**
+     * Convierte lista de ProductItemDTO a entidades ProductItem, asignando el producto padre.
+     */
+    private List<ProductItem> mapDtoItemsToEntities(List<ProductItemDTO> itemsDto, Product product) {
+        if (itemsDto == null || itemsDto.isEmpty()) return List.of();
+
+        return itemsDto.stream()
+                .filter(Objects::nonNull)
+                .map(dto -> ProductItem.builder()
+                        .key(dto.getKey())
+                        .title(dto.getTitle())
+                        .price(dto.getPrice())
+                        .image(dto.getImage())
+                        .description(dto.getDescription())
+                        .pages(dto.getPages())
+                        .format(dto.getFormat())
+                        .isDefault(dto.getIsDefault() != null ? dto.getIsDefault() : false)
+                        .product(product)
+                        .build())
+                .collect(Collectors.toList());
     }
 }
 
