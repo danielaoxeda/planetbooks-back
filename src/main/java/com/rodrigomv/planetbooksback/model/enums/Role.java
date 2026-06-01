@@ -1,4 +1,4 @@
-package com.rodrigomv.planetbooksback.model.entity;
+package com.rodrigomv.planetbooksback.model.enums;
 
 /**
  * Enum que define los roles de usuario en el sistema.

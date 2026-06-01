@@ -2,7 +2,7 @@ package com.rodrigomv.planetbooksback.service;
 
 import com.rodrigomv.planetbooksback.model.dto.UserDTO;
 import com.rodrigomv.planetbooksback.model.dto.UserRegistrationDTO;
-import com.rodrigomv.planetbooksback.model.entity.Role;
+import com.rodrigomv.planetbooksback.model.enums.Role;
 import com.rodrigomv.planetbooksback.model.entity.User;
 import com.rodrigomv.planetbooksback.repository.UserRepository;
 import lombok.RequiredArgsConstructor;

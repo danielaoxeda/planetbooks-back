@@ -1,7 +1,7 @@
 package com.rodrigomv.planetbooksback.repository;
 
 import com.rodrigomv.planetbooksback.model.entity.Order;
-import com.rodrigomv.planetbooksback.model.entity.OrderStatus;
+import com.rodrigomv.planetbooksback.model.enums.OrderStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;

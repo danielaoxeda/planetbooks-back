@@ -1,5 +1,6 @@
 package com.rodrigomv.planetbooksback.model.entity;
 
+import com.rodrigomv.planetbooksback.model.enums.OrderStatus;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;

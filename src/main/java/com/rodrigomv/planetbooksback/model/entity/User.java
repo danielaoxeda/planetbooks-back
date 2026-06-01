@@ -1,5 +1,6 @@
 package com.rodrigomv.planetbooksback.model.entity;
 
+import com.rodrigomv.planetbooksback.model.enums.Role;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
