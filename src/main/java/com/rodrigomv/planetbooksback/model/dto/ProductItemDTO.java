@@ -16,6 +16,7 @@ import java.math.BigDecimal;
 @Builder
 public class ProductItemDTO {
     private Long id;
+    private Long productId;
     private String key;
     private String title;
     private BigDecimal price;
@@ -23,6 +24,7 @@ public class ProductItemDTO {
     private String description;
     private String pages;
     private String format;
+    private Integer stock;
     private Boolean isDefault;
 }
 
