@@ -106,6 +106,7 @@ Collaboration practices include:
 - Feature branches
 - Pull Requests
 - Code reviews
+- Reparto de responsabilidades: ver `REPARTO_EQUIPO.md`
 
 
 ## 🔗 Related Repository
