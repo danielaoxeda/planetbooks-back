@@ -17,6 +17,7 @@ import java.math.BigDecimal;
  * Cada ProductItem pertenece a un Product y tiene:
  * - Key único (identificador dentro del producto)
  * - Precio individual
+ * - Stock disponible
  * - Puede ser marcado como item por defecto
  * 
  * Constraints:
@@ -62,6 +63,11 @@ public class ProductItem {
     @Builder.Default
     @Column(nullable = false)
     private Boolean isDefault = false;
+    
+    @NotNull
+    @Column(nullable = false)
+    @Builder.Default
+    private Integer stock = 0;
     
     /**
      * Referencia al producto padre.
