@@ -14,11 +14,7 @@ public class CorsConfig {
             @Override
             public void addCorsMappings(CorsRegistry registry) {
                 registry.addMapping("/**")
-                    .allowedOrigins(
-                        "http://localhost:3000",                  
-                        "https://planetbooks-front.onrender.com",
-                        "https://planetbook.solidwebs.com"        
-                    )
+                    .allowedOrigins("*")
                     .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE")
                     .allowedHeaders("*")
                     .allowCredentials(false); 
