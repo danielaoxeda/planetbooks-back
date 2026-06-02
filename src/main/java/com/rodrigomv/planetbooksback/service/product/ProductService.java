@@ -1,9 +1,11 @@
-package com.rodrigomv.planetbooksback.service;
+package com.rodrigomv.planetbooksback.service.product;
 
 import com.rodrigomv.planetbooksback.model.dto.ProductDTO;
 import com.rodrigomv.planetbooksback.model.dto.ProductItemDTO;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+
+import java.util.List;
 
 public interface ProductService {
     Page<ProductDTO> getAllProducts(Pageable pageable);
@@ -15,14 +17,13 @@ public interface ProductService {
     void deleteProduct(Long id);
 
     ProductItemDTO getProductItemById(Long id);
-    java.util.List<ProductItemDTO> getAllProductItems();
+    List<ProductItemDTO> getAllProductItems();
     ProductItemDTO createProductItem(ProductItemDTO productItemDTO);
     ProductItemDTO updateProductItem(Long id, ProductItemDTO productItemDTO);
     ProductItemDTO patchProductItem(Long id, ProductItemDTO productItemDTO);
     void deleteProductItem(Long id);
     void decreaseStock(Long productId, String itemKey, Integer quantity);
 
-    java.util.List<String> getAllTags();
-    java.util.List<String> getAllLevels();
+    List<String> getAllTags();
+    List<String> getAllLevels();
 }
-
