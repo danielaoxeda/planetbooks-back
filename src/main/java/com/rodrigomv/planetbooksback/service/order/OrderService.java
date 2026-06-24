@@ -2,13 +2,13 @@ package com.rodrigomv.planetbooksback.service.order;
 
 import com.rodrigomv.planetbooksback.model.dto.OrderDTO;
 import com.rodrigomv.planetbooksback.model.dto.SalesSummaryDTO;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
+
+import java.util.List;
 
 public interface OrderService {
     OrderDTO createOrder(Long userId);
-    Page<OrderDTO> getOrdersForUser(Long userId, Pageable pageable);
+    List<OrderDTO> getOrdersForUser(Long userId);
     OrderDTO getOrderById(Long orderId);
-    Page<OrderDTO> getAllOrders(Pageable pageable);
+    List<OrderDTO> getAllOrders();
     SalesSummaryDTO exportSalesSummary();
 }

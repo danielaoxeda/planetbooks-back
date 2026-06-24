@@ -39,7 +39,7 @@ public class ProductItem {
     private Long id;
     
     @NotBlank
-    @Column(nullable = false)
+    @Column(name = "item_key", nullable = false)
     private String key;
     
     @NotBlank

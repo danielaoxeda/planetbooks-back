@@ -48,9 +48,9 @@ public class User {
     @Column(nullable = false)
     private Role role;
     
-    @Column(nullable = false)
+    @Column(name = "enabled", nullable = false)
     @Builder.Default
-    private Boolean enabled = true;
+    private Boolean enabled = Boolean.TRUE;
     
     @CreationTimestamp
     @Column(nullable = false, updatable = false)

@@ -2,14 +2,12 @@ package com.rodrigomv.planetbooksback.service.product;
 
 import com.rodrigomv.planetbooksback.model.dto.ProductDTO;
 import com.rodrigomv.planetbooksback.model.dto.ProductItemDTO;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 
 public interface ProductService {
-    Page<ProductDTO> getAllProducts(Pageable pageable);
-    Page<ProductDTO> searchProducts(String title, String tag, String level, Pageable pageable);
+    List<ProductDTO> getAllProducts();
+    List<ProductDTO> searchProducts(String title, String tag, String level);
     ProductDTO getProductById(Long id);
     ProductDTO createProduct(ProductDTO productDTO);
     ProductDTO updateProduct(Long id, ProductDTO productDTO);

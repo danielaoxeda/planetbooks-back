@@ -10,8 +10,6 @@ import com.rodrigomv.planetbooksback.repository.ProductItemRepository;
 import com.rodrigomv.planetbooksback.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,24 +27,24 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<ProductDTO> getAllProducts(Pageable pageable) {
-        log.debug("Obteniendo productos con paginación");
-        return productRepository.findAll(pageable).map(this::convertToDTO);
+    public List<ProductDTO> getAllProducts() {
+        log.debug("Obteniendo todos los productos");
+        return productRepository.findAll().stream().map(this::convertToDTO).collect(Collectors.toList());
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Page<ProductDTO> searchProducts(String title, String tag, String level, Pageable pageable) {
+    public List<ProductDTO> searchProducts(String title, String tag, String level) {
         if (title != null && !title.isBlank()) {
-            return productRepository.findByTitleContainingIgnoreCase(title, pageable).map(this::convertToDTO);
+            return productRepository.findByTitleContainingIgnoreCase(title).stream().map(this::convertToDTO).collect(Collectors.toList());
         }
         if (tag != null && !tag.isBlank()) {
-            return productRepository.findByTag(tag, pageable).map(this::convertToDTO);
+            return productRepository.findByTag(tag).stream().map(this::convertToDTO).collect(Collectors.toList());
         }
         if (level != null && !level.isBlank()) {
-            return productRepository.findByLevel(level, pageable).map(this::convertToDTO);
+            return productRepository.findByLevel(level).stream().map(this::convertToDTO).collect(Collectors.toList());
         }
-        return getAllProducts(pageable);
+        return getAllProducts();
     }
 
     @Override

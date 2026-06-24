@@ -1,5 +1,6 @@
 package com.rodrigomv.planetbooksback.service;
 
+import com.rodrigomv.planetbooksback.model.dto.UpdateUserDTO;
 import com.rodrigomv.planetbooksback.model.dto.UserDTO;
 import com.rodrigomv.planetbooksback.model.dto.UserRegistrationDTO;
 import com.rodrigomv.planetbooksback.model.enums.Role;
@@ -113,26 +114,26 @@ public class UserService {
      * Actualiza un usuario existente.
      *
      * @param id ID del usuario
-     * @param updateDTO datos para actualizar
+     * @param updateDTO datos para actualizar (solo name y email)
      * @return DTO del usuario actualizado
      */
-    public UserDTO updateUser(Long id, UserRegistrationDTO updateDTO) {
+    public UserDTO updateUser(Long id, UpdateUserDTO updateDTO) {
         log.info("Actualizando usuario: {}", id);
 
         User user = userRepository.findById(id)
             .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
 
-        // Validar email si cambió
-        if (!user.getEmail().equals(updateDTO.getEmail()) &&
+        if (updateDTO.getEmail() != null && !updateDTO.getEmail().equals(user.getEmail()) &&
             userRepository.existsByEmail(updateDTO.getEmail())) {
             log.warn("Email ya está registrado: {}", updateDTO.getEmail());
             throw new IllegalArgumentException("El email ya está registrado");
         }
 
-        user.setName(updateDTO.getName());
-        user.setEmail(updateDTO.getEmail());
-        if (updateDTO.getPassword() != null && !updateDTO.getPassword().isEmpty()) {
-            user.setPassword(passwordEncoder.encode(updateDTO.getPassword()));
+        if (updateDTO.getName() != null) {
+            user.setName(updateDTO.getName());
+        }
+        if (updateDTO.getEmail() != null) {
+            user.setEmail(updateDTO.getEmail());
         }
 
         User updatedUser = userRepository.save(user);

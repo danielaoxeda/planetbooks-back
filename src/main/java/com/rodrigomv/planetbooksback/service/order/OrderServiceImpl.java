@@ -16,8 +16,6 @@ import com.rodrigomv.planetbooksback.repository.OrderRepository;
 import com.rodrigomv.planetbooksback.repository.ProductItemRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -74,8 +72,8 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<OrderDTO> getOrdersForUser(Long userId, Pageable pageable) {
-        return orderRepository.findByUserId(userId, pageable).map(this::convertToDTO);
+    public List<OrderDTO> getOrdersForUser(Long userId) {
+        return orderRepository.findByUserId(userId).stream().map(this::convertToDTO).collect(Collectors.toList());
     }
 
     @Override
@@ -88,8 +86,8 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<OrderDTO> getAllOrders(Pageable pageable) {
-        return orderRepository.findAll(pageable).map(this::convertToDTO);
+    public List<OrderDTO> getAllOrders() {
+        return orderRepository.findAll().stream().map(this::convertToDTO).collect(Collectors.toList());
     }
 
     @Override

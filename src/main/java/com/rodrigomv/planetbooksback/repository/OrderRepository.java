@@ -2,8 +2,6 @@ package com.rodrigomv.planetbooksback.repository;
 
 import com.rodrigomv.planetbooksback.model.entity.Order;
 import com.rodrigomv.planetbooksback.model.enums.OrderStatus;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -14,14 +12,6 @@ import java.util.List;
  */
 @Repository
 public interface OrderRepository extends JpaRepository<Order, Long> {
-    
-    /**
-     * Busca todas las órdenes de un usuario con paginación.
-     * @param userId el ID del usuario
-     * @param pageable parámetros de paginación
-     * @return página de órdenes
-     */
-    Page<Order> findByUserId(Long userId, Pageable pageable);
     
     /**
      * Busca todas las órdenes de un usuario.

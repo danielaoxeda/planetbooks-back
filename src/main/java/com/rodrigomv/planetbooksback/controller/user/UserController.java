@@ -1,7 +1,7 @@
 package com.rodrigomv.planetbooksback.controller.user;
 
+import com.rodrigomv.planetbooksback.model.dto.UpdateUserDTO;
 import com.rodrigomv.planetbooksback.model.dto.UserDTO;
-import com.rodrigomv.planetbooksback.model.dto.UserRegistrationDTO;
 import com.rodrigomv.planetbooksback.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -31,7 +31,7 @@ public class UserController {
 
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN') or @userSecurity.isCurrentUser(authentication, #id)")
-    public ResponseEntity<UserDTO> updateUser(@PathVariable Long id, @RequestBody UserRegistrationDTO updateDTO) {
+    public ResponseEntity<UserDTO> updateUser(@PathVariable Long id, @RequestBody UpdateUserDTO updateDTO) {
         return ResponseEntity.ok(userService.updateUser(id, updateDTO));
     }
 

@@ -4,11 +4,11 @@ import com.rodrigomv.planetbooksback.model.dto.OrderDTO;
 import com.rodrigomv.planetbooksback.model.dto.SalesSummaryDTO;
 import com.rodrigomv.planetbooksback.service.order.OrderService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/orders")
@@ -25,8 +25,8 @@ public class OrderController {
 
     @GetMapping("/my")
     @PreAuthorize("hasRole('USER')")
-    public ResponseEntity<Page<OrderDTO>> getMyOrders(@RequestParam Long userId, Pageable pageable) {
-        return ResponseEntity.ok(orderService.getOrdersForUser(userId, pageable));
+    public ResponseEntity<List<OrderDTO>> getMyOrders(@RequestParam Long userId) {
+        return ResponseEntity.ok(orderService.getOrdersForUser(userId));
     }
 
     @GetMapping("/{id}")
@@ -37,8 +37,8 @@ public class OrderController {
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Page<OrderDTO>> listAllOrders(Pageable pageable) {
-        return ResponseEntity.ok(orderService.getAllOrders(pageable));
+    public ResponseEntity<List<OrderDTO>> listAllOrders() {
+        return ResponseEntity.ok(orderService.getAllOrders());
     }
 
     @GetMapping("/summary")
