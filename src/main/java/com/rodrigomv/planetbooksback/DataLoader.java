@@ -60,6 +60,7 @@ public class DataLoader implements CommandLineRunner {
     }
 
     private void loadProducts() {
+        // Si ya hay productos, verificar si tienen items. Si no, se insertan los items faltantes.
         if (productRepository.count() > 0) {
             log.info("Ya existen productos, omitiendo seeder");
             return;
