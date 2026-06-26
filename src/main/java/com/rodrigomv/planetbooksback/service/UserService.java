@@ -1,5 +1,6 @@
 package com.rodrigomv.planetbooksback.service;
 
+import com.rodrigomv.planetbooksback.model.dto.ChangePasswordDTO;
 import com.rodrigomv.planetbooksback.model.dto.UpdateUserDTO;
 import com.rodrigomv.planetbooksback.model.dto.UserDTO;
 import com.rodrigomv.planetbooksback.model.dto.UserRegistrationDTO;
@@ -185,6 +186,56 @@ public class UserService {
 
         user.setRole(Role.ADMIN);
         userRepository.save(user);
+    }
+
+    /**
+     * Degrada un usuario a USER (le quita el rol ADMIN).
+     *
+     * @param id ID del usuario
+     */
+    public void demoteToUser(Long id) {
+        log.info("Degradando usuario a USER: {}", id);
+
+        User user = userRepository.findById(id)
+            .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
+
+        user.setRole(Role.USER);
+        userRepository.save(user);
+    }
+
+    /**
+     * Cambia la contraseña de un usuario.
+     *
+     * @param id ID del usuario
+     * @param changePasswordDTO DTO con contraseña actual y nueva
+     */
+    public void changePassword(Long id, ChangePasswordDTO changePasswordDTO) {
+        log.info("Cambiando contraseña para usuario: {}", id);
+
+        User user = userRepository.findById(id)
+            .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
+
+        // Validar contraseña actual
+        if (!passwordEncoder.matches(changePasswordDTO.getCurrentPassword(), user.getPassword())) {
+            log.warn("Contraseña actual incorrecta para usuario: {}", id);
+            throw new IllegalArgumentException("La contraseña actual es incorrecta");
+        }
+
+        // Validar que nueva contraseña y confirmación coincidan
+        if (!changePasswordDTO.getNewPassword().equals(changePasswordDTO.getConfirmPassword())) {
+            log.warn("Las contraseñas no coinciden para usuario: {}", id);
+            throw new IllegalArgumentException("La nueva contraseña y la confirmación no coinciden");
+        }
+
+        // Validar que la nueva contraseña no sea igual a la actual
+        if (passwordEncoder.matches(changePasswordDTO.getNewPassword(), user.getPassword())) {
+            log.warn("La nueva contraseña es igual a la actual para usuario: {}", id);
+            throw new IllegalArgumentException("La nueva contraseña debe ser diferente a la actual");
+        }
+
+        user.setPassword(passwordEncoder.encode(changePasswordDTO.getNewPassword()));
+        userRepository.save(user);
+        log.info("Contraseña cambiada exitosamente para usuario: {}", id);
     }
 
     /**

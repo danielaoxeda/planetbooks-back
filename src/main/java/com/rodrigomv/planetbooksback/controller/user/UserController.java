@@ -1,10 +1,12 @@
 package com.rodrigomv.planetbooksback.controller.user;
 
+import com.rodrigomv.planetbooksback.model.dto.ChangePasswordDTO;
 import com.rodrigomv.planetbooksback.model.dto.UpdateUserDTO;
 import com.rodrigomv.planetbooksback.model.dto.UserDTO;
 import com.rodrigomv.planetbooksback.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
@@ -53,6 +55,21 @@ public class UserController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> promoteToAdmin(@PathVariable Long id) {
         userService.promoteToAdmin(id);
+        return ResponseEntity.ok().build();
+    }
+
+    @PatchMapping("/{id}/demote")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> demoteToUser(@PathVariable Long id) {
+        userService.demoteToUser(id);
+        return ResponseEntity.ok().build();
+    }
+
+    @PutMapping("/{id}/password")
+    @PreAuthorize("hasRole('ADMIN') or @userSecurity.isCurrentUser(authentication, #id)")
+    public ResponseEntity<Void> changePassword(@PathVariable Long id,
+                                               @Valid @RequestBody ChangePasswordDTO changePasswordDTO) {
+        userService.changePassword(id, changePasswordDTO);
         return ResponseEntity.ok().build();
     }
 
