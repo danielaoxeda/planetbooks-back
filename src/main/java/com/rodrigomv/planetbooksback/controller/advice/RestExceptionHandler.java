@@ -56,7 +56,9 @@ public class RestExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleUnexpected(Exception ex, HttpServletRequest request) {
-        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Error interno del servidor", request.getRequestURI());
+        // Log the exception for debugging
+        ex.printStackTrace();
+        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Error interno del servidor: " + ex.getMessage(), request.getRequestURI());
     }
 
     private ResponseEntity<Map<String, Object>> buildResponse(HttpStatus status, String message, String path) {

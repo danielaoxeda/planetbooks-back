@@ -49,7 +49,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/products/**").permitAll()
                 .requestMatchers("/uploads/**").permitAll()
-                .requestMatchers("/api/auth/**", "/actuator/**",
+                .requestMatchers("/api/auth/**", "/actuator/**", "/error",
                     "/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
                 .anyRequest().authenticated());
 
