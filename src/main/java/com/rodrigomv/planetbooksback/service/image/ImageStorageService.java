@@ -1,12 +1,11 @@
 package com.rodrigomv.planetbooksback.service.image;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
-import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
-import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.core.sync.RequestBody;
-import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.BucketAlreadyOwnedByYouException;
 import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
@@ -60,27 +59,25 @@ public class ImageStorageService {
 
     private S3Client s3Client;
 
+    public ImageStorageService() {
+        // no-arg constructor for tests and manual instantiation
+    }
+
+    @Autowired
+    public ImageStorageService(ObjectProvider<S3Client> s3ClientProvider) {
+        this.s3Client = s3ClientProvider.getIfAvailable();
+    }
+
     @PostConstruct
     public void init() {
         if (!r2Enabled) {
             return;
         }
-        if (endpoint == null || endpoint.isBlank() || accessKey == null || accessKey.isBlank()
-                || secretKey == null || secretKey.isBlank()) {
+        // When R2 is enabled, an S3Client bean should be provided by configuration.
+        if (s3Client == null) {
             throw new IllegalStateException(
-                "R2 está habilitado pero falta configuración. Verificá: app.r2.endpoint, " +
-                "app.r2.access-key, app.r2.secret-key. Aktivá el perfil 'prod' o configurá las variables de entorno.");
+                "R2 está habilitado pero el cliente S3 no fue configurado. Revisá la configuración y la creación del bean S3Client.");
         }
-
-        AwsBasicCredentials credentials = AwsBasicCredentials.create(accessKey, secretKey);
-
-        this.s3Client = S3Client.builder()
-                .endpointOverride(URI.create(endpoint))
-                .region(Region.of(region))
-                .credentialsProvider(StaticCredentialsProvider.create(credentials))
-                .forcePathStyle(true) // R2 requiere path-style
-                .build();
-
         ensureBucketExists();
     }
 
