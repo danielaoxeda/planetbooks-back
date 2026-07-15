@@ -3,18 +3,27 @@ package com.rodrigomv.planetbooksback.service.image;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.BucketAlreadyOwnedByYouException;
+import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.HeadBucketRequest;
+import software.amazon.awssdk.services.s3.model.NoSuchBucketException;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
+import jakarta.annotation.PostConstruct;
+import java.net.URI;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
 /**
- * Servicio para almacenar y gestionar imágenes de productos.
+ * Servicio para almacenar y gestionar imágenes de productos en Cloudflare R2.
+ * Usa el SDK de AWS S3 compatible con la API de R2.
  */
 @Service
 public class ImageStorageService {
@@ -28,24 +37,63 @@ public class ImageStorageService {
 
     private static final long MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
-    private final Path uploadDir;
+    @Value("${app.r2.enabled:true}")
+    private boolean r2Enabled;
 
-    public ImageStorageService(@Value("${app.upload.dir:uploads}") String uploadDir) {
-        this.uploadDir = Paths.get(uploadDir).toAbsolutePath().normalize();
+    @Value("${app.r2.bucket:planetbooks-images}")
+    private String bucket;
+
+    @Value("${app.r2.public-url:}")
+    private String publicUrl;
+
+    @Value("${app.r2.endpoint:}")
+    private String endpoint;
+
+    @Value("${app.r2.region:auto}")
+    private String region;
+
+    @Value("${app.r2.access-key:}")
+    private String accessKey;
+
+    @Value("${app.r2.secret-key:}")
+    private String secretKey;
+
+    private S3Client s3Client;
+
+    @PostConstruct
+    public void init() {
+        if (!r2Enabled) {
+            return;
+        }
+
+        AwsBasicCredentials credentials = AwsBasicCredentials.create(accessKey, secretKey);
+
+        this.s3Client = S3Client.builder()
+                .endpointOverride(URI.create(endpoint))
+                .region(Region.of(region))
+                .credentialsProvider(StaticCredentialsProvider.create(credentials))
+                .forcePathStyle(true) // R2 requiere path-style
+                .build();
+
+        ensureBucketExists();
+    }
+
+    private void ensureBucketExists() {
         try {
-            Files.createDirectories(this.uploadDir);
-            Files.createDirectories(this.uploadDir.resolve("products"));
-        } catch (IOException e) {
-            throw new RuntimeException("No se pudo crear el directorio de uploads", e);
+            s3Client.headBucket(HeadBucketRequest.builder().bucket(bucket).build());
+        } catch (NoSuchBucketException e) {
+            s3Client.createBucket(CreateBucketRequest.builder().bucket(bucket).build());
+        } catch (BucketAlreadyOwnedByYouException e) {
+            // Bucket ya existe y es nuestro, seguir
         }
     }
 
     /**
-     * Guarda una imagen y retorna la ruta relativa.
+     * Sube una imagen a R2 y retorna la URL pública.
      *
-     * @param file El archivo a guardar
-     * @param productId El ID del producto (para organizar en subcarpetas)
-     * @return La ruta relativa del archivo guardado
+     * @param file      El archivo a guardar
+     * @param productId El ID del producto (para organizar en el path)
+     * @return La URL pública de la imagen
      */
     public String saveImage(MultipartFile file, Long productId) {
         validateFile(file);
@@ -54,62 +102,89 @@ public class ImageStorageService {
         String extension = getFileExtension(originalFilename);
         String newFilename = UUID.randomUUID().toString() + extension;
 
-        Path productDir = uploadDir.resolve("products").resolve(productId.toString());
+        String key = "products/" + productId + "/" + newFilename;
+
         try {
-            Files.createDirectories(productDir);
-        } catch (IOException e) {
-            throw new RuntimeException("No se pudo crear el directorio del producto", e);
+            s3Client.putObject(
+                PutObjectRequest.builder()
+                    .bucket(bucket)
+                    .key(key)
+                    .contentType(file.getContentType())
+                    .build(),
+                RequestBody.fromBytes(file.getBytes())
+            );
+        } catch (Exception e) {
+            throw new RuntimeException("Error al subir la imagen a R2: " + e.getMessage(), e);
         }
 
-        Path targetLocation = productDir.resolve(newFilename);
-        try {
-            Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
-        } catch (IOException e) {
-            throw new RuntimeException("Error al guardar la imagen", e);
-        }
-
-        // Retorna la ruta relativa: /uploads/products/{productId}/{filename}
-        return "/uploads/products/" + productId + "/" + newFilename;
+        return buildPublicUrl(key);
     }
 
     /**
-     * Elimina una imagen del almacenamiento.
+     * Elimina una imagen de R2.
      *
-     * @param imagePath La ruta relativa de la imagen
-     * @return true si se eliminó correctamente, false si no existía
+     * @param imageUrl La URL pública de la imagen
+     * @return true si se eliminó correctamente
      */
-    public boolean deleteImage(String imagePath) {
-        if (imagePath == null || imagePath.isEmpty()) {
+    public boolean deleteImage(String imageUrl) {
+        if (imageUrl == null || imageUrl.isEmpty()) {
             return false;
         }
 
-        // Limpia la ruta y construye el path absoluto
-        String cleanPath = imagePath.startsWith("/") ? imagePath.substring(1) : imagePath;
-        Path filePath = uploadDir.getParent().resolve(cleanPath).normalize();
+        String key = extractKeyFromUrl(imageUrl);
+        if (key == null) {
+            return false;
+        }
 
         try {
-            return Files.deleteIfExists(filePath);
-        } catch (IOException e) {
+            s3Client.deleteObject(DeleteObjectRequest.builder()
+                .bucket(bucket)
+                .key(key)
+                .build());
+            return true;
+        } catch (Exception e) {
             return false;
         }
     }
 
     /**
-     * Obtiene la ruta absoluta de una imagen.
+     * Obtiene la URL pública de una imagen dado su key.
      *
-     * @param relativePath La ruta relativa de la imagen
-     * @return La ruta absoluta
+     * @param relativePath La ruta relativa (ej: products/123/abc.jpg)
+     * @return La URL pública completa
      */
-    public Path getAbsolutePath(String relativePath) {
+    public String getPublicUrl(String relativePath) {
         if (relativePath == null || relativePath.isEmpty()) {
             return null;
         }
-        String cleanPath = relativePath.startsWith("/") ? relativePath.substring(1) : relativePath;
-        return uploadDir.getParent().resolve(cleanPath).normalize();
+        return buildPublicUrl(relativePath);
+    }
+
+    private String buildPublicUrl(String key) {
+        String base = publicUrl.endsWith("/") ? publicUrl.substring(0, publicUrl.length() - 1) : publicUrl;
+        String cleanKey = key.startsWith("/") ? key.substring(1) : key;
+        return base + "/" + cleanKey;
+    }
+
+    private String extractKeyFromUrl(String imageUrl) {
+        if (imageUrl == null || imageUrl.isEmpty()) {
+            return null;
+        }
+        // Si la URL contiene el public-url base, extrae el key
+        if (publicUrl != null && !publicUrl.isEmpty() && imageUrl.startsWith(publicUrl)) {
+            return imageUrl.substring(publicUrl.length()).replaceFirst("^/", "");
+        }
+        // Si no, asume que es un path relativo y lo normaliza
+        String clean = imageUrl.startsWith("/") ? imageUrl.substring(1) : imageUrl;
+        // Quitar /uploads/products/ si existe (compatibilidad con formato anterior)
+        if (clean.startsWith("uploads/products/")) {
+            return clean.substring("uploads/".length());
+        }
+        return clean;
     }
 
     private void validateFile(MultipartFile file) {
-        if (file.isEmpty()) {
+        if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException("El archivo está vacío");
         }
 
@@ -128,14 +203,13 @@ public class ImageStorageService {
             return ".jpg";
         }
         String extension = filename.substring(filename.lastIndexOf("."));
-        // Normaliza la extensión a minúsculas
         return extension.toLowerCase();
     }
 
     /**
-     * Retorna la ruta base del directorio de uploads para configuración de recursos estáticos.
+     * Retorna el bucket configurado para tests o configs externas.
      */
-    public Path getUploadDir() {
-        return uploadDir;
+    public String getBucket() {
+        return bucket;
     }
 }
