@@ -108,14 +108,19 @@ public class ImageStorageService {
 
         String key = "products/" + productId + "/" + newFilename;
 
-        s3Client.putObject(
-            PutObjectRequest.builder()
-                .bucket(bucket)
-                .key(key)
-                .contentType(file.getContentType())
-                .build(),
-            RequestBody.fromBytes(file.getBytes())
-        );
+        try {
+            byte[] bytes = file.getBytes();
+            s3Client.putObject(
+                PutObjectRequest.builder()
+                    .bucket(bucket)
+                    .key(key)
+                    .contentType(file.getContentType())
+                    .build(),
+                RequestBody.fromBytes(bytes)
+            );
+        } catch (java.io.IOException e) {
+            throw new IllegalStateException("Error al leer los bytes del archivo", e);
+        }
 
         return buildPublicUrl(key);
     }
