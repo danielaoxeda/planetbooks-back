@@ -8,6 +8,7 @@ import com.rodrigomv.planetbooksback.exception.ResourceNotFoundException;
 import com.rodrigomv.planetbooksback.model.entity.ProductItem;
 import com.rodrigomv.planetbooksback.repository.ProductItemRepository;
 import com.rodrigomv.planetbooksback.repository.ProductRepository;
+import com.rodrigomv.planetbooksback.service.image.ImageStorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

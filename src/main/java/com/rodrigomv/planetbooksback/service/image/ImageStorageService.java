@@ -65,6 +65,12 @@ public class ImageStorageService {
         if (!r2Enabled) {
             return;
         }
+        if (endpoint == null || endpoint.isBlank() || accessKey == null || accessKey.isBlank()
+                || secretKey == null || secretKey.isBlank()) {
+            throw new IllegalStateException(
+                "R2 está habilitado pero falta configuración. Verificá: app.r2.endpoint, " +
+                "app.r2.access-key, app.r2.secret-key. Aktivá el perfil 'prod' o configurá las variables de entorno.");
+        }
 
         AwsBasicCredentials credentials = AwsBasicCredentials.create(accessKey, secretKey);
 
@@ -97,6 +103,7 @@ public class ImageStorageService {
      */
     public String saveImage(MultipartFile file, Long productId) {
         validateFile(file);
+        ensureR2Ready();
 
         String originalFilename = file.getOriginalFilename();
         String extension = getFileExtension(originalFilename);
@@ -104,18 +111,14 @@ public class ImageStorageService {
 
         String key = "products/" + productId + "/" + newFilename;
 
-        try {
-            s3Client.putObject(
-                PutObjectRequest.builder()
-                    .bucket(bucket)
-                    .key(key)
-                    .contentType(file.getContentType())
-                    .build(),
-                RequestBody.fromBytes(file.getBytes())
-            );
-        } catch (Exception e) {
-            throw new RuntimeException("Error al subir la imagen a R2: " + e.getMessage(), e);
-        }
+        s3Client.putObject(
+            PutObjectRequest.builder()
+                .bucket(bucket)
+                .key(key)
+                .contentType(file.getContentType())
+                .build(),
+            RequestBody.fromBytes(file.getBytes())
+        );
 
         return buildPublicUrl(key);
     }
@@ -148,6 +151,33 @@ public class ImageStorageService {
     }
 
     /**
+     * Resuelve la URL pública de una imagen. Maneja tanto URLs nuevas de R2
+     * como rutas legacy del filesystem local (/uploads/products/...).
+     *
+     * @param imagePath La URL o ruta de la imagen
+     * @return La URL pública completa, o la original si no se puede resolver
+     */
+    public String resolveImageUrl(String imagePath) {
+        if (imagePath == null || imagePath.isEmpty()) {
+            return imagePath;
+        }
+        // Ya es una URL pública de R2
+        if (publicUrl != null && !publicUrl.isBlank() && imagePath.startsWith(publicUrl)) {
+            return imagePath;
+        }
+        // Legacy local path: /uploads/products/X/file.jpg → R2 URL
+        if (imagePath.startsWith("/uploads/products/") || imagePath.startsWith("uploads/products/")) {
+            String key = imagePath.replaceFirst("^/?uploads/", "");
+            return buildPublicUrl(key);
+        }
+        // Otra ruta relativa: products/X/file.jpg
+        if (imagePath.startsWith("products/")) {
+            return buildPublicUrl(imagePath);
+        }
+        return imagePath;
+    }
+
+    /**
      * Obtiene la URL pública de una imagen dado su key.
      *
      * @param relativePath La ruta relativa (ej: products/123/abc.jpg)
@@ -166,17 +196,23 @@ public class ImageStorageService {
         return base + "/" + cleanKey;
     }
 
+    private void ensureR2Ready() {
+        if (s3Client == null) {
+            throw new IllegalStateException(
+                "R2 no está configurado. Aktivá el perfil 'prod' (SPRING_PROFILES_ACTIVE=prod) " +
+                "o configurá las variables de entorno APP_R2_ENABLED, APP_R2_ENDPOINT, " +
+                "APP_R2_ACCESS_KEY, APP_R2_SECRET_KEY.");
+        }
+    }
+
     private String extractKeyFromUrl(String imageUrl) {
         if (imageUrl == null || imageUrl.isEmpty()) {
             return null;
         }
-        // Si la URL contiene el public-url base, extrae el key
         if (publicUrl != null && !publicUrl.isEmpty() && imageUrl.startsWith(publicUrl)) {
             return imageUrl.substring(publicUrl.length()).replaceFirst("^/", "");
         }
-        // Si no, asume que es un path relativo y lo normaliza
         String clean = imageUrl.startsWith("/") ? imageUrl.substring(1) : imageUrl;
-        // Quitar /uploads/products/ si existe (compatibilidad con formato anterior)
         if (clean.startsWith("uploads/products/")) {
             return clean.substring("uploads/".length());
         }
@@ -187,11 +223,9 @@ public class ImageStorageService {
         if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException("El archivo está vacío");
         }
-
         if (file.getSize() > MAX_FILE_SIZE) {
             throw new IllegalArgumentException("El archivo excede el tamaño máximo de 5MB");
         }
-
         String contentType = file.getContentType();
         if (contentType == null || !ALLOWED_CONTENT_TYPES.contains(contentType)) {
             throw new IllegalArgumentException("Tipo de archivo no permitido. Solo se aceptan: JPEG, PNG, GIF, WebP");
@@ -202,14 +236,14 @@ public class ImageStorageService {
         if (filename == null || !filename.contains(".")) {
             return ".jpg";
         }
-        String extension = filename.substring(filename.lastIndexOf("."));
-        return extension.toLowerCase();
+        return filename.substring(filename.lastIndexOf(".")).toLowerCase();
     }
 
-    /**
-     * Retorna el bucket configurado para tests o configs externas.
-     */
     public String getBucket() {
         return bucket;
+    }
+
+    public boolean isR2Enabled() {
+        return r2Enabled && s3Client != null;
     }
 }
