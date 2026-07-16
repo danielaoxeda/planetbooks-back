@@ -85,9 +85,20 @@ public class ImageStorageService {
         try {
             s3Client.headBucket(HeadBucketRequest.builder().bucket(bucket).build());
         } catch (NoSuchBucketException e) {
-            s3Client.createBucket(CreateBucketRequest.builder().bucket(bucket).build());
+            try {
+                s3Client.createBucket(CreateBucketRequest.builder().bucket(bucket).build());
+            } catch (software.amazon.awssdk.services.s3.model.S3Exception se) {
+                int status = se.statusCode();
+                // Authorization or other errors — do not fail application startup, but log guidance
+                System.err.println("[WARN] No se pudo crear el bucket '" + bucket + "' en R2. Código HTTP: " + status + ". Mensaje: " + se.getMessage());
+                System.err.println("[WARN] Verificá app.r2.endpoint, app.r2.access-key y app.r2.secret-key, y que las credenciales tengan permisos para gestionar buckets en R2.");
+            }
         } catch (BucketAlreadyOwnedByYouException e) {
             // Bucket ya existe y es nuestro, seguir
+        } catch (software.amazon.awssdk.services.s3.model.S3Exception se) {
+            // Errores de autorización u otros al consultar el bucket
+            System.err.println("[WARN] Error al comprobar existencia del bucket '" + bucket + "'. Código HTTP: " + se.statusCode() + ", mensaje: " + se.getMessage());
+            System.err.println("[WARN] Si es un error 401/403, las credenciales o el endpoint pueden ser inválidos.");
         }
     }
 
@@ -110,14 +121,19 @@ public class ImageStorageService {
 
         try {
             byte[] bytes = file.getBytes();
-            s3Client.putObject(
-                PutObjectRequest.builder()
-                    .bucket(bucket)
-                    .key(key)
-                    .contentType(file.getContentType())
-                    .build(),
-                RequestBody.fromBytes(bytes)
-            );
+            try {
+                s3Client.putObject(
+                    PutObjectRequest.builder()
+                        .bucket(bucket)
+                        .key(key)
+                        .contentType(file.getContentType())
+                        .build(),
+                    RequestBody.fromBytes(bytes)
+                );
+            } catch (software.amazon.awssdk.services.s3.model.S3Exception se) {
+                // Provide a clearer error message for authorization/endpoint problems
+                throw new IllegalStateException("Error al subir la imagen a R2: " + se.getMessage() + ". Verificá app.r2.endpoint, app.r2.access-key y app.r2.secret-key.", se);
+            }
         } catch (java.io.IOException e) {
             throw new IllegalStateException("Error al leer los bytes del archivo", e);
         }
