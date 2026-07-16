@@ -18,6 +18,9 @@ public class S3Config {
     @Value("${app.r2.endpoint:}")
     private String endpoint;
 
+    @Value("${app.r2.public-url:}")
+    private String publicUrl;
+
     @Value("${app.r2.region:auto}")
     private String region;
 
@@ -29,12 +32,18 @@ public class S3Config {
 
     @Bean
     public S3Client s3Client() {
-        if (endpoint == null || endpoint.isBlank() || accessKey == null || accessKey.isBlank() || secretKey == null || secretKey.isBlank()) {
-            throw new IllegalStateException("R2 está habilitado pero falta configuración. Verificá: app.r2.endpoint, app.r2.access-key, app.r2.secret-key.");
+        // If explicit endpoint missing, try to fall back to publicUrl (common in app.properties)
+        String effectiveEndpoint = endpoint;
+        if ((effectiveEndpoint == null || effectiveEndpoint.isBlank()) && publicUrl != null && !publicUrl.isBlank()) {
+            effectiveEndpoint = publicUrl.endsWith("/") ? publicUrl.substring(0, publicUrl.length() - 1) : publicUrl;
+        }
+
+        if (effectiveEndpoint == null || effectiveEndpoint.isBlank() || accessKey == null || accessKey.isBlank() || secretKey == null || secretKey.isBlank()) {
+            throw new IllegalStateException("R2 está habilitado pero falta configuración. Verificá: app.r2.endpoint or app.r2.public-url, app.r2.access-key, app.r2.secret-key.");
         }
         AwsBasicCredentials credentials = AwsBasicCredentials.create(accessKey, secretKey);
         return S3Client.builder()
-            .endpointOverride(URI.create(endpoint))
+            .endpointOverride(URI.create(effectiveEndpoint))
             .region(Region.of(region))
             .credentialsProvider(StaticCredentialsProvider.create(credentials))
             .forcePathStyle(true)
